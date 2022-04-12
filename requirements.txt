@@ -1,3 +1,6 @@
 pre-commit
 flake8
 pytest
+pyyaml
+beautifulsoup4
+openpyxl
