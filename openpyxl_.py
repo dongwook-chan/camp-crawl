@@ -9,9 +9,9 @@ import yaml_
 def init_sheet() -> None:
     global wb, ws
 
-    wb = openpyxl.Workbook()
+    wb = openpyxl.Workbook(write_only=True)
 
-    ws = wb.active
+    ws = wb.create_sheet()
     ws.title = "크롤링 데이터"
     ws.append(yaml_.sheet_headers)
 
@@ -21,4 +21,4 @@ def append_to_sheet(row: List) -> None:
 
 
 def save_sheet() -> None:
-    wb.save(f"크롤링 - {datetime.now()}")
+    wb.save(f"크롤링 - {datetime.now()}.xlsx")

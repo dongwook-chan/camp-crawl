@@ -1,9 +1,9 @@
 from typing import Dict, DefaultDict, List, Tuple
-import sys
 from collections import defaultdict
 import json
 
 from bs4 import BeautifulSoup
+from bs4 import NavigableString
 
 # wrapper for existing modules
 import constants
@@ -31,8 +31,28 @@ def append_to_sheet_row(
     cell_value: Tuple[str, Dict, DefaultDict, List]
 ) -> None:
     if isinstance(cell_value, (dict, defaultdict, list)):
-        cell_value = json.dumps(cell_value, ensure_ascii=False)
+        if len(cell_value) == 0:
+            cell_value = ''
+        else:
+            cell_value = json.dumps(cell_value, ensure_ascii=False)
     sheet_row.append(cell_value)
+
+
+def end_node(tag):
+    if tag.name in ("img"):
+        return True
+    if tag.name not in ("div", "span"):
+        return False
+    # if str return
+    if isinstance(tag, NavigableString):
+        return False
+    # if no text return false
+    if not tag.text:
+        return False
+    # no other tags inside other than text
+    elif len(tag.find_all(text=False)) > 0:
+        return False
+    return True
 
 
 if __name__ == '__main__':
@@ -126,7 +146,8 @@ if __name__ == '__main__':
                     'tbody.xans-product-option'
                 )
 
-                option_dict = defaultdict(dict)
+                option_dict1 = defaultdict(dict)
+                option_dict2 = defaultdict(dict)
                 option_type_ctr = defaultdict(int)
 
                 for option_tbody_tag in option_tbody_tag_list:
@@ -172,9 +193,14 @@ if __name__ == '__main__':
                         option_price = (
                             option_response[option_id]['ori_item_price']
                         )
+                        if option_type == '본품':
+                            option_dict = option_dict1
+                        else:
+                            option_dict = option_dict2
                         option_dict[option_key]['품명'] = option_title
                         option_dict[option_key]['가격'] = option_price
-                append_to_sheet_row(option_dict)
+                append_to_sheet_row(option_dict1)
+                append_to_sheet_row(option_dict2)
 
                 # 8. 상품 썸네일 이미지 링크
                 img_area = product_soup.select(
@@ -205,31 +231,37 @@ if __name__ == '__main__':
 
                 # 9. 상세페이지 내 모든 컨텐츠
                 product_detail_area = product_soup.select(
-                    'div#prdDetail'
+                    'div.edibot-product-detail'
                 )[0]
 
-                product_detail_url_list = []
-
-                product_detail_img_tag_list = product_detail_area.select(
-                    'img'
+                product_detail_tag_list = product_detail_area.find_all(
+                    end_node
                 )
 
-                for product_detail_img_tag in product_detail_img_tag_list:
-                    product_detail_url_list.append(
-                        source_detail['domain_name'] +
-                        product_detail_img_tag['ec-data-src']
-                    )
+                product_detail_list = []
+                visited_text = {}
+                for product_detail_tag in product_detail_tag_list:
+                    if product_detail_tag.name in ('img'):
+                        product_detail_list.append(
+                            source_detail['domain_name'] +
+                            product_detail_tag['ec-data-src']
+                        )
+                    elif product_detail_tag.name in ('span', 'div'):
+                        product_detail_text = product_detail_tag.get_text()
+                        if product_detail_text:
+                            product_detail_list.append(
+                                product_detail_text
+                            )
 
-                append_to_sheet_row(product_detail_url_list)
-
-                print(sheet_row)
+                # print(product_detail_list)
+                append_to_sheet_row(product_detail_list)
 
                 openpyxl_.append_to_sheet(sheet_row)
 
-                sys.exit()
+                break
 
-            sys.exit()
+            break
 
-    sys.exit()
+        break
 
     openpyxl_.save_sheet()
