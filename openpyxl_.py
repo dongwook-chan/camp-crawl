@@ -21,4 +21,4 @@ def append_to_sheet(row: List) -> None:
 
 
 def save_sheet() -> None:
-    wb.save(f"크롤링 - {datetime.now()}.xlsx")
+    wb.save(f"output/크롤링 - {datetime.now()}.xlsx")

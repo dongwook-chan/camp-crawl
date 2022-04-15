@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, DefaultDict, List, Tuple
 from collections import defaultdict
 import json
@@ -6,10 +7,15 @@ from bs4 import BeautifulSoup
 from bs4 import NavigableString
 
 # wrapper for existing modules
+import logging_
 import constants
 import yaml_
 import requests_
 import openpyxl_
+
+
+logging_.init_root_logger()
+logger = logging.getLogger(__name__)
 
 
 def search_tag_recursively(
@@ -55,11 +61,20 @@ def end_node(tag):
     return True
 
 
+def get_either_attrs(
+    tag: BeautifulSoup, attr_name_list: List[str]
+) -> Tuple[str, int]:
+    for attr_name in attr_name_list:
+        if attr_name in tag.attrs:
+            return tag[attr_name]
+
+
 if __name__ == '__main__':
     openpyxl_.init_sheet()
 
     for source_name, source_detail in yaml_.source.items():
         for page_no in range(1, 1000):
+            logger.debug(f"product_list no: {page_no}")
             # [상품 목록 페이지]
             try:
                 product_list_soup = requests_.get_soup_for_url(
@@ -107,21 +122,25 @@ if __name__ == '__main__':
                 product_summary_area = product_soup.select('div.infoArea')[0]
 
                 # 1. 상품 페이지 링크
+                logger.debug("#1")
                 append_to_sheet_row(product_url)
 
                 # 2. 상품 이름
+                logger.debug("#2")
                 product_name_tag = product_summary_area.select(
                     'div.headingArea > h2'
                 )[0]
                 append_to_sheet_row(product_name_tag.get_text())
 
                 # 3. 상품 브랜드
+                logger.debug("#3")
                 brand_name_tag = product_summary_area.select(
                     'div.cu_brand'
                 )[0]
                 append_to_sheet_row(brand_name_tag.get_text())
 
                 # 4. 상품 정가, 5. 상품 할인가
+                logger.debug("#4, 5")
                 product_price_tag = product_summary_area.select(
                     'div.detail_price'
                 )[0]
@@ -138,6 +157,7 @@ if __name__ == '__main__':
                     append_to_sheet_row(price)
 
                 # 6. 본품 옵션 7. 추가상품 옵션
+                logger.debug("#6, 7")
                 option_table_tag = product_summary_area.select(
                     'table.xans-product-option'
                 )[0]
@@ -193,7 +213,7 @@ if __name__ == '__main__':
                         option_price = (
                             option_response[option_id]['ori_item_price']
                         )
-                        if option_type == '본품':
+                        if option_type != '옵션':
                             option_dict = option_dict1
                         else:
                             option_dict = option_dict2
@@ -203,6 +223,7 @@ if __name__ == '__main__':
                 append_to_sheet_row(option_dict2)
 
                 # 8. 상품 썸네일 이미지 링크
+                logger.debug("#8")
                 img_area = product_soup.select(
                     'div.imgArea'
                 )[0]
@@ -230,8 +251,9 @@ if __name__ == '__main__':
                 append_to_sheet_row(thumbnail_url_list)
 
                 # 9. 상세페이지 내 모든 컨텐츠
+                logger.debug("#9")
                 product_detail_area = product_soup.select(
-                    'div.edibot-product-detail'
+                    'div.cont'
                 )[0]
 
                 product_detail_tag_list = product_detail_area.find_all(
@@ -244,7 +266,9 @@ if __name__ == '__main__':
                     if product_detail_tag.name in ('img'):
                         product_detail_list.append(
                             source_detail['domain_name'] +
-                            product_detail_tag['ec-data-src']
+                            get_either_attrs(
+                                product_detail_tag, ['ec-data-src', 'src']
+                            )
                         )
                     elif product_detail_tag.name in ('span', 'div'):
                         product_detail_text = product_detail_tag.get_text()
@@ -257,11 +281,5 @@ if __name__ == '__main__':
                 append_to_sheet_row(product_detail_list)
 
                 openpyxl_.append_to_sheet(sheet_row)
-
-                break
-
-            break
-
-        break
 
     openpyxl_.save_sheet()

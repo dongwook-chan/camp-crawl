@@ -1,3 +1,4 @@
+import logging
 import requests
 import json
 
@@ -5,6 +6,9 @@ import yaml_
 from bs4 import BeautifulSoup
 
 import constants
+
+
+logger = logging.getLogger(__name__)
 
 
 class NextShoppingMall(Exception):
@@ -26,6 +30,8 @@ class NextOption(Exception):
 def send_request(
     url: str, crawl_depth: constants.CrawlDepth
 ) -> requests.models.Response:
+    logging.debug(url)
+
     for retries in range(yaml_.config['retries']):
         response = requests.get(url, headers=yaml_.request_headers)
         if response.status_code == 200:
