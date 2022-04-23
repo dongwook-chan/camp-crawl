@@ -1,5 +1,5 @@
 # camp-crawl
-Join our camp crawl to better know the camping industry.
+Join our camp crawl to better understand the camping industry.
 
 
 ## Installation Instructions
