@@ -140,3 +140,5 @@ source.md
 
 # output files
 *.xlsx
+output/
+log/
